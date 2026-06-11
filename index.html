@@ -396,6 +396,25 @@
     }
 
     try { await Storage.init(estabId); } catch (e) { console.error('[Firebase]', e); }
+
+    // Verifica se o estabelecimento está com acesso ativo
+    const _d = Storage.getEstabData();
+    const _blocked = _d.status === 'suspended' ||
+      (_d.status === 'active' && _d.paidUntil &&
+       new Date() > new Date(new Date(_d.paidUntil).getTime() + 3 * 86400000));
+    if (_blocked) {
+      if (loading) loading.innerHTML = `
+        <div style="text-align:center;font-family:'Raleway',sans-serif;padding:2rem">
+          <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+          <h2 style="color:#92400E;margin-bottom:.5rem">Serviço Indisponível</h2>
+          <p style="color:#555;max-width:300px;margin:0 auto">
+            Este estabelecimento está com o serviço suspenso.<br>
+            Entre em contato diretamente com o estabelecimento.
+          </p>
+        </div>`;
+      return;
+    }
+
     App.init();
     if (loading) loading.style.display = 'none';
   })();

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Agendor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/style.css">
+  <style>
+    .owner-header { background: var(--blue-900); }
+    .adm-table { width:100%; border-collapse:collapse; font-size:.875rem; }
+    .adm-table th { padding:.6rem .75rem; font-size:.7rem; font-weight:800; text-transform:uppercase;
+                    letter-spacing:.04em; color:var(--gray-60); text-align:left;
+                    border-bottom:2px solid var(--gray-20); white-space:nowrap; }
+    .adm-table td { padding:.75rem; border-bottom:1px solid var(--gray-10); vertical-align:middle; }
+    .adm-table tr:last-child td { border-bottom:none; }
+    .adm-table tr:hover td { background:var(--gray-10); }
+    .badge { display:inline-block; padding:.2rem .6rem; border-radius:99px; font-size:.72rem; font-weight:700; }
+    .adm-stat { background:var(--white); border-radius:var(--radius-md); padding:1.25rem 1.5rem;
+                box-shadow:var(--shadow-sm); text-align:center; }
+    .adm-stat-val { font-size:1.75rem; font-weight:800; color:var(--blue-800); line-height:1; }
+    .adm-stat-label { font-size:.75rem; font-weight:600; color:var(--gray-60); margin-top:.25rem; text-transform:uppercase; letter-spacing:.04em; }
+    .adm-stats-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1rem; margin-bottom:1.5rem; }
+    @media(max-width:700px){ .adm-stats-grid { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+
+<!-- Tela de carregamento -->
+<div id="app-loading" style="
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(255,255,255,.97);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1rem;font-family:'Raleway',sans-serif;
+">
+  <div style="width:44px;height:44px;border:4px solid #EDF5FF;border-top-color:#1351B4;border-radius:50%;animation:_ld_spin .8s linear infinite"></div>
+  <div style="font-weight:700;color:#1351B4;font-size:1rem">Carregando...</div>
+  <style>@keyframes _ld_spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<!-- HEADER -->
+<header class="app-header owner-header">
+  <div class="header-top">
+    <div class="header-logo">
+      <div class="header-logo-icon">✂</div>
+      <div class="header-logo-text">
+        <strong>Agendor</strong>
+        Admin
+      </div>
+    </div>
+    <nav class="header-nav" id="adm-nav-area"></nav>
+  </div>
+  <div class="header-strip"></div>
+</header>
+
+<div class="breadcrumb">
+  <div class="breadcrumb-inner">
+    <span>Agendor</span>
+    <span class="sep">›</span>
+    <span>Painel Administrativo</span>
+  </div>
+</div>
+
+<main class="main-content">
+
+  <!-- ===== LOGIN ===== -->
+  <div id="adm-login-screen">
+    <div style="max-width:420px;margin:3rem auto">
+      <div class="success-card" style="text-align:center">
+        <div class="success-icon" style="background:var(--blue-100);font-size:2rem">🔑</div>
+        <h2 class="success-title">Acesso Administrativo</h2>
+        <p class="success-desc" style="margin-bottom:1.5rem">Restrito ao administrador do sistema.</p>
+        <div class="form-group" style="margin-bottom:1rem;text-align:left">
+          <label class="form-label">E-mail</label>
+          <input class="form-input" id="adm-email" type="email" placeholder="admin@email.com" autocomplete="email">
+        </div>
+        <div class="form-group" style="margin-bottom:1.5rem;text-align:left">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="adm-pass" type="password" placeholder="••••••" autocomplete="current-password">
+        </div>
+        <div class="form-error" id="adm-error" style="display:none;text-align:center;margin-bottom:1rem"></div>
+        <button id="adm-login-btn" class="btn btn-primary btn-full btn-lg" onclick="Admin.login()">
+          Entrar no Admin
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD ADMIN ===== -->
+  <div id="adm-dashboard" class="hidden">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h2 style="font-size:1.25rem;font-weight:700;color:var(--blue-800)">🛠 Painel Administrativo</h2>
+        <p class="text-sm text-gray">Gerencie mensalidades e acessos dos estabelecimentos</p>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button onclick="Admin.loadAndRender()" class="btn btn-sm btn-outline-gray">🔄 Atualizar</button>
+        <button onclick="Admin.logout()" class="btn btn-sm btn-outline-gray">Sair</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="adm-stats-grid">
+      <div class="adm-stat">
+        <div class="adm-stat-val" id="adm-stat-total">—</div>
+        <div class="adm-stat-label">Total</div>
+      </div>
+      <div class="adm-stat">
+        <div class="adm-stat-val" style="color:#16A34A" id="adm-stat-active">—</div>
+        <div class="adm-stat-label">Ativos</div>
+      </div>
+      <div class="adm-stat">
+        <div class="adm-stat-val" style="color:#2563EB" id="adm-stat-trial">—</div>
+        <div class="adm-stat-label">Trial</div>
+      </div>
+      <div class="adm-stat">
+        <div class="adm-stat-val" style="color:#DC2626" id="adm-stat-overdue">—</div>
+        <div class="adm-stat-label">Inadimplentes</div>
+      </div>
+      <div class="adm-stat">
+        <div class="adm-stat-val" style="color:#16A34A" id="adm-stat-rev">—</div>
+        <div class="adm-stat-label">Receita Mensal</div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="cfg-section" style="overflow-x:auto;padding:0">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th>Estabelecimento</th>
+            <th>E-mail</th>
+            <th>Status</th>
+            <th>Vencimento</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="adm-table-body">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-40)">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legenda -->
+    <div style="margin-top:1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.78rem;color:var(--gray-60)">
+      <span><span class="badge" style="background:#F0FDF4;color:#16A34A">Ativo</span> Mensalidade em dia</span>
+      <span><span class="badge" style="background:#EFF6FF;color:#2563EB">Trial</span> Período de avaliação (7 dias)</span>
+      <span><span class="badge" style="background:#FFFBEB;color:#D97706">Vence em Xd</span> Próximo do vencimento</span>
+      <span><span class="badge" style="background:#FEF2F2;color:#DC2626">Bloqueado</span> Vencido + 3 dias de carência</span>
+      <span><span class="badge" style="background:#F3F4F6;color:#6B7280">Suspenso</span> Bloqueado manualmente</span>
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  Agendor &copy; 2026 — Painel Administrativo
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="src/js/firebase-config.js"></script>
+<script src="src/js/data.js"></script>
+<script src="src/js/admin.js"></script>
+<script>
+  (async function () {
+    const loading = document.getElementById('app-loading');
+    try { await Storage.init(); } catch (e) { console.error('[Firebase]', e); }
+
+    await new Promise(resolve => {
+      const unsub = Storage._auth.onAuthStateChanged(async user => {
+        unsub();
+        if (user && user.email === 'midia.alpha.ofc@gmail.com') {
+          document.getElementById('adm-login-screen').classList.add('hidden');
+          document.getElementById('adm-dashboard').classList.remove('hidden');
+          document.getElementById('adm-nav-area').innerHTML =
+            `<div style="color:rgba(255,255,255,.7);font-size:.82rem">Admin — conectado</div>`;
+          await Admin.loadAndRender();
+        }
+        resolve();
+      });
+    });
+
+    if (loading) loading.style.display = 'none';
+
+    document.getElementById('adm-pass')?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') Admin.login();
+    });
+  })();
+</script>
+</body>
+</html>
