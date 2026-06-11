@@ -1,4 +1,5 @@
-apiKey: "AIzaSyAMxsGNvmL2YYqM6qjbMUAPqZ0vY8a50dI",
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAMxsGNvmL2YYqM6qjbMUAPqZ0vY8a50dI",
   authDomain: "agendor-c4aee.firebaseapp.com",
   projectId: "agendor-c4aee",
   storageBucket: "agendor-c4aee.firebasestorage.app",
