@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Gestor — Agendor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/style.css">
+  <style>
+    .owner-header { background: var(--blue-900); }
+    .owner-type-tabs { display:flex; gap:.5rem; background:rgba(255,255,255,.08); border-radius:8px; padding:.3rem; }
+    .owner-type-tab {
+      padding:.4rem 1rem; border-radius:6px; font-size:.82rem; font-weight:700;
+      cursor:pointer; border:none; color:rgba(255,255,255,.7); background:none; transition:all .2s;
+    }
+    .owner-type-tab.active { background:var(--white); color:var(--blue-800); }
+    .pin-input {
+      letter-spacing:.5rem; font-size:1.5rem; text-align:center; font-family:monospace;
+      width:160px; padding:.75rem; border:2px solid var(--gray-20); border-radius:8px; outline:none;
+    }
+    .pin-input:focus { border-color:var(--blue-500); box-shadow:0 0 0 3px rgba(38,112,232,.15); }
+    .search-bar { display:flex; gap:.5rem; margin-bottom:1rem; }
+    .search-bar input { flex:1; }
+    .cfg-section { background:var(--white); border-radius:var(--radius-md); padding:1.5rem; margin-bottom:1rem; box-shadow:var(--shadow-sm); }
+    .toggle-switch { display:flex; align-items:center; gap:.75rem; cursor:pointer; }
+    .toggle-switch input[type=checkbox] { width:40px; height:22px; accent-color:var(--blue-600); cursor:pointer; }
+
+    /* ---- Analytics Dashboard ---- */
+    .anl-filter { display:flex; align-items:center; gap:.75rem; margin-bottom:1.25rem; flex-wrap:wrap;
+                  background:var(--white); border-radius:var(--radius-md); padding:.85rem 1.25rem;
+                  box-shadow:var(--shadow-sm); }
+    .anl-filter-label { font-size:.82rem; font-weight:700; color:var(--gray-60); white-space:nowrap; }
+    .anl-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+    @media(max-width:700px){ .anl-grid-2 { grid-template-columns:1fr; } }
+    .anl-section { background:var(--white); border-radius:var(--radius-md); padding:1.5rem; box-shadow:var(--shadow-sm); }
+    .anl-title { font-size:.82rem; font-weight:800; color:var(--blue-800); margin-bottom:1rem;
+                 text-transform:uppercase; letter-spacing:.04em; }
+    .anl-highlights { display:flex; gap:.75rem; margin-bottom:1rem; }
+    .anl-hl { flex:1; border-radius:8px; padding:.7rem .9rem; }
+    .anl-hl.best  { background:#f0fdf4; border:1px solid #86efac; }
+    .anl-hl.worst { background:#fff7ed; border:1px solid #fdba74; }
+    .anl-hl-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+                    color:var(--gray-60); margin-bottom:.2rem; }
+    .anl-hl-val { font-size:1.05rem; font-weight:800; line-height:1.2; }
+    .anl-hl.best  .anl-hl-val { color:#15803d; }
+    .anl-hl.worst .anl-hl-val { color:#c2410c; }
+    .anl-hl-sub { font-size:.75rem; font-weight:600; color:var(--gray-60); margin-top:.15rem; }
+    .anl-bar-row { display:flex; align-items:center; gap:.6rem; margin-bottom:.45rem; }
+    .anl-bar-label { width:54px; font-size:.78rem; font-weight:600; color:var(--gray-60);
+                     flex-shrink:0; text-align:right; }
+    .anl-bar-track { flex:1; height:10px; background:var(--gray-10); border-radius:99px; overflow:hidden; }
+    .anl-bar-fill  { height:100%; border-radius:99px;
+                     background:linear-gradient(90deg,var(--blue-400),var(--blue-600));
+                     transition:width .4s ease; }
+    .anl-bar-fill.fill-best  { background:linear-gradient(90deg,#4ade80,#16a34a); }
+    .anl-bar-fill.fill-worst { background:linear-gradient(90deg,#fca5a5,#dc2626); }
+    .anl-bar-value { width:84px; font-size:.74rem; font-weight:700; color:var(--blue-700);
+                     text-align:right; flex-shrink:0; white-space:nowrap; }
+    .anl-th { padding:.55rem .5rem; font-size:.7rem; font-weight:700; text-transform:uppercase;
+              letter-spacing:.04em; color:var(--gray-60); text-align:right; }
+    .anl-svc-row { border-bottom:1px solid var(--gray-10); transition:background .15s; }
+    .anl-svc-row:hover { background:var(--gray-10); }
+    .anl-svc-row:last-child { border-bottom:none; }
+  </style>
+</head>
+<body>
+
+<!-- Tela de carregamento enquanto conecta ao Firebase -->
+<div id="app-loading" style="
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(255,255,255,.97);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1rem;font-family:'Raleway',sans-serif;
+">
+  <div style="width:44px;height:44px;border:4px solid #EDF5FF;border-top-color:#1351B4;border-radius:50%;animation:_ld_spin .8s linear infinite"></div>
+  <div style="font-weight:700;color:#1351B4;font-size:1rem">Conectando ao banco de dados...</div>
+  <style>@keyframes _ld_spin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<!-- ============ HEADER GESTOR ============ -->
+<header class="app-header owner-header">
+  <div class="header-top">
+    <a href="index.html" class="header-logo">
+      <div class="header-logo-icon">✂</div>
+      <div class="header-logo-text">
+        <strong>Agendor</strong>
+        Painel do Gestor
+      </div>
+    </a>
+    <nav class="header-nav" id="owner-nav-area">
+      <!-- Preenchido após login -->
+    </nav>
+  </div>
+  <div class="header-strip"></div>
+</header>
+
+<div class="breadcrumb">
+  <div class="breadcrumb-inner">
+    <a href="index.html" style="color:var(--blue-600);text-decoration:none">Agendor</a>
+    <span class="sep">›</span>
+    <span>Painel do Gestor</span>
+  </div>
+</div>
+
+<main class="main-content">
+
+  <!-- ===== TELA DE LOGIN / CADASTRO ===== -->
+  <div id="owner-login-screen">
+    <div style="max-width:460px;margin:2rem auto">
+      <div class="success-card">
+        <div class="success-icon" style="background:var(--blue-100);font-size:2rem">✂️</div>
+        <h2 class="success-title">Agendor — Gestor</h2>
+        <p class="success-desc" style="margin-bottom:1.25rem">Acesse seu painel ou crie uma conta para o seu estabelecimento.</p>
+
+        <!-- Tabs login / criar conta -->
+        <div style="display:flex;border:1.5px solid var(--gray-20);border-radius:8px;overflow:hidden;margin-bottom:1.5rem">
+          <button id="tab-login-btn" onclick="Owner.showAuthTab('login')"
+            style="flex:1;padding:.65rem;font-weight:700;border:none;cursor:pointer;font-family:inherit;font-size:.9rem;background:var(--blue-600);color:#fff">
+            Entrar
+          </button>
+          <button id="tab-register-btn" onclick="Owner.showAuthTab('register')"
+            style="flex:1;padding:.65rem;font-weight:700;border:none;cursor:pointer;font-family:inherit;font-size:.9rem;background:transparent;color:var(--gray-60)">
+            Criar Conta
+          </button>
+        </div>
+
+        <!-- Formulário de login -->
+        <div id="auth-login">
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">E-mail</label>
+            <input class="form-input" id="owner-email" type="email" placeholder="seu@email.com" autocomplete="email">
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem">
+            <label class="form-label">Senha</label>
+            <input class="form-input" id="owner-pass" type="password" placeholder="••••••" autocomplete="current-password">
+          </div>
+          <div class="form-error" id="owner-login-error" style="display:block;text-align:center;margin-bottom:1rem"></div>
+          <button id="owner-login-btn" class="btn btn-primary btn-full btn-lg" onclick="Owner.login()">
+            Entrar no Painel
+          </button>
+        </div>
+
+        <!-- Formulário de cadastro -->
+        <div id="auth-register" style="display:none">
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">Nome do Estabelecimento <span class="required">*</span></label>
+            <input class="form-input" id="reg-name" type="text" placeholder="Ex: Barbearia do João">
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">Tipo de Estabelecimento <span class="required">*</span></label>
+            <select class="form-input" id="reg-type">
+              <option value="barbearia">✂️ Barbearia</option>
+              <option value="salao">💇 Salão de Beleza</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">E-mail <span class="required">*</span></label>
+            <input class="form-input" id="reg-email" type="email" placeholder="seu@email.com">
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label class="form-label">Senha <span class="required">*</span></label>
+            <input class="form-input" id="reg-pass" type="password" placeholder="Mínimo 6 caracteres">
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem">
+            <label class="form-label">Confirmar Senha <span class="required">*</span></label>
+            <input class="form-input" id="reg-pass2" type="password" placeholder="Repita a senha">
+          </div>
+          <div class="form-error" id="owner-reg-error" style="display:block;text-align:center;margin-bottom:1rem"></div>
+          <button id="owner-reg-btn" class="btn btn-primary btn-full btn-lg" onclick="Owner.register()">
+            Criar Conta e Entrar
+          </button>
+        </div>
+
+        <div class="divider"></div>
+        <a href="index.html" class="btn btn-outline-gray btn-full">‹ Voltar</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="owner-dashboard" class="hidden">
+
+    <!-- Cabeçalho do dashboard -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h2 id="dash-title" style="font-size:1.25rem;font-weight:700;color:var(--blue-800)">✂️ Painel do Estabelecimento</h2>
+        <p id="dash-sub" class="text-sm text-gray">Gerencie agendamentos, horários e serviços</p>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+<button onclick="Owner.exportAllToGCal()" class="btn btn-sm btn-outline-gray" title="Exportar para Google Agenda">📅 Google Agenda</button>
+        <button onclick="Owner.logout()" class="btn btn-sm btn-outline-gray">Sair</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="dash-stats">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-today">0</div>
+        <div class="stat-label">Agendamentos Hoje</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-value" id="stat-free">0</div>
+        <div class="stat-label">Horários Livres Hoje</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-value" id="stat-rev-today">R$ 0</div>
+        <div class="stat-label">Receita de Hoje</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-value" id="stat-rev-week">R$ 0</div>
+        <div class="stat-label">Receita da Semana</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" id="tab-agenda" onclick="Owner.setTab('agenda')">
+        📋 Agenda (7 dias)
+      </button>
+      <button class="tab" id="tab-calendar" onclick="Owner.setTab('calendar')">
+        📅 Calendário
+      </button>
+      <button class="tab" id="tab-search" onclick="Owner.setTab('search')">
+        🔍 Buscar
+      </button>
+      <button class="tab" id="tab-clients" onclick="Owner.setTab('clients')">
+        👥 Clientes
+      </button>
+<button class="tab" id="tab-analytics" onclick="Owner.setTab('analytics')">
+        📊 Analytics
+      </button>
+<button class="tab" id="tab-services" onclick="Owner.setTab('services')">
+        ✂️ Serviços
+      </button>
+      <button class="tab" id="tab-config" onclick="Owner.setTab('config')">
+        ⚙️ Configurações
+      </button>
+    </div>
+
+    <!-- ---- TAB: AGENDA ---- -->
+    <div id="content-agenda" class="tab-content">
+      <div class="alert alert-info" style="margin-bottom:1rem">
+        <span class="alert-icon">ℹ</span>
+        <span>Exibindo os próximos <strong>7 dias</strong> de agendamentos. Domingos são fechados.</span>
+      </div>
+      <div id="agenda-container"></div>
+    </div>
+
+    <!-- ---- TAB: CALENDÁRIO ---- -->
+    <div id="content-calendar" class="tab-content hidden">
+      <div class="alert alert-info" style="margin-bottom:1rem">
+        <span class="alert-icon">📅</span>
+        <span>Clique em um dia para ver os agendamentos detalhados. Cores indicam disponibilidade.</span>
+      </div>
+      <div id="owner-cal-container"></div>
+    </div>
+
+    <!-- ---- TAB: BUSCAR ---- -->
+    <div id="content-search" class="tab-content hidden">
+      <div class="search-bar">
+        <input class="form-input" id="search-input" type="text" placeholder="🔍 Buscar por nome do cliente, data (AAAA-MM-DD) ou código..."
+          oninput="Owner.searchBookings()">
+        <button class="btn btn-primary" onclick="Owner.searchBookings()">Buscar</button>
+      </div>
+      <div id="search-results">
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ</span>
+          <span>Digite acima para buscar agendamentos.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- TAB: CLIENTES ---- -->
+    <div id="content-clients" class="tab-content hidden">
+      <div id="clients-container"></div>
+    </div>
+
+<!-- ---- TAB: ANALYTICS ---- -->
+    <div id="content-analytics" class="tab-content hidden"></div>
+
+<!-- ---- TAB: SERVIÇOS ---- -->
+    <div id="content-services" class="tab-content hidden"></div>
+
+    <!-- ---- TAB: CONFIG ---- -->
+    <div id="content-config" class="tab-content hidden">
+      <div class="cfg-section">
+        <p class="section-title">Dados do Estabelecimento</p>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">Nome do Estabelecimento</label>
+            <input class="form-input" id="cfg-name" type="text" placeholder="Ex: Barbearia do João">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select class="form-input" id="cfg-type">
+              <option value="barbearia">✂️ Barbearia</option>
+              <option value="salao">💇 Salão de Beleza</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">Telefone / WhatsApp de Contato</label>
+            <input class="form-input" id="cfg-phone" type="tel" placeholder="(11) 99999-9999">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endereço</label>
+            <input class="form-input" id="cfg-address" type="text" placeholder="Rua, número, bairro, cidade">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:1rem">
+          <label class="form-label">Logo do Estabelecimento</label>
+          <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-top:.4rem">
+            <div id="cfg-logo-placeholder" style="
+              width:88px;height:88px;border:2px dashed var(--gray-20);border-radius:var(--radius-md);
+              display:flex;align-items:center;justify-content:center;
+              font-size:2rem;color:var(--gray-40);cursor:pointer;flex-shrink:0;
+            " onclick="document.getElementById('cfg-logo-input').click()" title="Clique para escolher">✂</div>
+            <img id="cfg-logo-preview" src="" alt="Logo" style="
+              display:none;width:88px;height:88px;object-fit:contain;flex-shrink:0;
+              border-radius:var(--radius-md);border:1.5px solid var(--gray-20);background:var(--gray-10);
+            ">
+            <div style="display:flex;flex-direction:column;gap:.5rem;justify-content:center">
+              <input type="file" id="cfg-logo-input" accept="image/*" style="display:none"
+                onchange="Owner.uploadLogo(this)">
+              <button type="button" class="btn btn-sm btn-outline-gray"
+                onclick="document.getElementById('cfg-logo-input').click()">
+                📁 Escolher imagem
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-gray" onclick="Owner.removeLogo()">
+                🗑 Remover logo
+              </button>
+              <span class="form-hint">PNG ou JPG. Recomendado: 300×300 px.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cfg-section">
+        <p class="section-title">🔗 Integração Google Agenda</p>
+        <div class="alert alert-info mb-2">
+          <span class="alert-icon">💡</span>
+          <span>Conecte ao Google Agenda para visualizar seus agendamentos diretamente no calendário. Use os botões <strong>📅 Google Agenda</strong> nos agendamentos para adicionar um por um, ou <strong>📅 Google Agenda</strong> no topo para exportar todos de uma vez (formato .ics).</span>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">E-mail do Google Agenda</label>
+          <input class="form-input" id="cfg-gcal-email" type="email" placeholder="seu@gmail.com">
+          <span class="form-hint">Informe o e-mail da conta Google onde deseja receber os eventos.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="cfg-gcal-enabled">
+          <span class="fw-bold">Sincronização automática habilitada</span>
+        </label>
+
+        <div style="margin-top:1.25rem;display:flex;gap:.75rem;flex-wrap:wrap">
+          <button onclick="Owner.exportAllToGCal()" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0"><path fill="#4285F4" d="M21.5 12.3c0-.6-.1-1.2-.2-1.8H12v3.4h5.3c-.2 1.2-1 2.2-2 2.8v2.3h3.2c1.9-1.7 2.9-4.2 2.9-6.7z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6C4.7 19.8 8.1 22 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A9.9 9.9 0 002 12c0 1.6.4 3.1 1.1 4.5l3.3-2.5z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9C17 2.9 14.7 2 12 2 8.1 2 4.7 4.2 3.1 7.4l3.3 2.6C7.2 7.7 9.4 5.9 12 5.9z"/></svg>
+            Exportar todos (.ics)
+          </button>
+          <a href="https://calendar.google.com" target="_blank" class="gcal-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M21.5 12.3c0-.6-.1-1.2-.2-1.8H12v3.4h5.3c-.2 1.2-1 2.2-2 2.8v2.3h3.2c1.9-1.7 2.9-4.2 2.9-6.7z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6C4.7 19.8 8.1 22 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A9.9 9.9 0 002 12c0 1.6.4 3.1 1.1 4.5l3.3-2.5z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9C17 2.9 14.7 2 12 2 8.1 2 4.7 4.2 3.1 7.4l3.3 2.6C7.2 7.7 9.4 5.9 12 5.9z"/></svg>
+            Abrir Google Agenda
+          </a>
+        </div>
+      </div>
+
+      <div class="cfg-section">
+        <p class="section-title">🔗 Link de Agendamento para Clientes</p>
+        <div class="alert alert-info" style="margin-bottom:1rem">
+          <span class="alert-icon">💡</span>
+          <span>Compartilhe este link com seus clientes. Cada estabelecimento tem um link exclusivo.</span>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <input class="form-input" id="cfg-client-link" type="text" readonly
+            style="flex:1;min-width:200px;background:var(--gray-10);cursor:text;font-size:.82rem"
+            onclick="this.select()">
+          <button type="button" class="btn btn-primary btn-sm" onclick="Owner.copyClientLink()">
+            📋 Copiar Link
+          </button>
+        </div>
+      </div>
+
+      <div class="cfg-section">
+        <p class="section-title">🗑 Resetar Dados</p>
+        <div class="alert alert-warn" style="margin-bottom:1rem">
+          <span class="alert-icon">⚠</span>
+          <span>Esta ação apaga <strong>todos os agendamentos e clientes cadastrados</strong> permanentemente. Configurações, logo e serviços são mantidos.</span>
+        </div>
+        <button type="button" class="btn btn-danger" onclick="Owner.resetData()">
+          🗑 Zerar todos os agendamentos e clientes
+        </button>
+      </div>
+
+      <div class="btn-actions">
+        <button onclick="Owner.saveConfig()" class="btn btn-primary">💾 Salvar Configurações</button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="app-footer">
+  Agendor &copy; 2026 — Painel do Gestor
+</footer>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="src/js/firebase-config.js"></script>
+<script src="src/js/data.js"></script>
+<script src="src/js/app.js"></script>
+<script src="src/js/owner.js"></script>
+<script>
+  // Inicializa Firebase e verifica se o gestor já está autenticado
+  (async function () {
+    const loading = document.getElementById('app-loading');
+    try { await Storage.init(); } catch (e) { console.error('[Firebase]', e); }
+
+    // onAuthStateChanged dispara uma vez com o estado atual (usuário logado ou null)
+    await new Promise(resolve => {
+      const unsub = Storage._auth.onAuthStateChanged(async user => {
+        unsub();
+        if (user && !Owner.state.loggedIn) {
+          try {
+            await Storage._setEstab(user.uid);
+            Owner._afterLogin();
+          } catch(e) { console.error('[Auth]', e); }
+        }
+        resolve();
+      });
+    });
+
+    if (loading) loading.style.display = 'none';
+  })();
+</script>
+</body>
+</html>
