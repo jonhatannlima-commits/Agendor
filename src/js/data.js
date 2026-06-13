@@ -73,6 +73,7 @@ const Storage = {
   _db:              null,
   _auth:            null,
   _estabId:         null,
+  _estabData:       null,
   _unsubscribers:   [],
   _changeCallbacks: [],
 
@@ -100,7 +101,8 @@ const Storage = {
     this._services = null;
     this._config   = null;
     this._hours    = null;
-    this._logo     = '';
+    this._logo      = '';
+    this._estabData = null;
     await this._loadAll();
     this._ready = true;
     this._setupListeners();
@@ -111,20 +113,22 @@ const Storage = {
   _doc(path) { return this._db.doc(`establishments/${this._estabId}/${path}`); },
 
   async _loadAll() {
-    const [bSnap, cSnap, sSnap, cfgDoc, hrsDoc, logoDoc] = await Promise.all([
+    const [bSnap, cSnap, sSnap, cfgDoc, hrsDoc, logoDoc, rootDoc] = await Promise.all([
       this._col('bookings').get(),
       this._col('clients').get(),
       this._col('services').get(),
       this._doc('settings/config').get(),
       this._doc('settings/hours').get(),
       this._doc('settings/logo').get(),
+      this._db.doc(`establishments/${this._estabId}`).get(),
     ]);
-    this._bookings = bSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-    this._clients  = cSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-    this._services = sSnap.empty ? null : sSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-    this._config   = cfgDoc.exists ? cfgDoc.data() : null;
-    this._hours    = hrsDoc.exists ? hrsDoc.data() : null;
-    this._logo     = logoDoc.exists ? (logoDoc.data().dataUrl || '') : '';
+    this._bookings  = bSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    this._clients   = cSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    this._services  = sSnap.empty ? null : sSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    this._config    = cfgDoc.exists ? cfgDoc.data() : null;
+    this._hours     = hrsDoc.exists ? hrsDoc.data() : null;
+    this._logo      = logoDoc.exists ? (logoDoc.data().dataUrl || '') : '';
+    this._estabData = rootDoc.exists ? rootDoc.data() : {};
   },
 
   _setupListeners() {
@@ -163,7 +167,15 @@ const Storage = {
 
   // Cria/atualiza o documento raiz do estabelecimento (registro inicial)
   async createEstablishment(uid, data) {
-    await this._db.doc(`establishments/${uid}`).set({ ...data, createdAt: new Date().toISOString() }, { merge: true });
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7);
+    await this._db.doc(`establishments/${uid}`).set({
+      ...data,
+      status:     'trial',
+      paidUntil:  trialEnd.toISOString().split('T')[0],
+      monthlyFee: 44.99,
+      createdAt:  new Date().toISOString()
+    }, { merge: true });
   },
 
   // --- Clients ---
@@ -264,6 +276,17 @@ const Storage = {
     await Promise.all(ops);
     this._bookings = [];
     this._clients  = [];
+  },
+
+  getEstabData() { return this._estabData || {}; },
+
+  async getAllEstablishments() {
+    const snap = await this._db.collection('establishments').get();
+    return snap.docs.map(d => ({ ...d.data(), uid: d.id }));
+  },
+
+  async updateEstabBilling(uid, data) {
+    await this._db.doc(`establishments/${uid}`).set(data, { merge: true });
   },
 
   _genId() {

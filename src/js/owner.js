@@ -89,6 +89,11 @@ const Owner = {
 
   _afterLogin() {
     this.state.loggedIn = true;
+    const estabData = Storage.getEstabData();
+    if (this._isBlocked(estabData)) {
+      this._showSuspendedScreen(estabData);
+      return;
+    }
     document.getElementById('owner-login-screen').classList.add('hidden');
     document.getElementById('owner-dashboard').classList.remove('hidden');
     const cfg = Storage.getOwnerConfig();
@@ -96,6 +101,35 @@ const Owner = {
       <div style="color:rgba(255,255,255,.7);font-size:.82rem">${cfg.name || 'Gestor'} — conectado</div>
     `;
     this.init();
+  },
+
+  _isBlocked(d) {
+    if (!d || !d.status) return false;
+    if (d.status === 'suspended') return true;
+    if (d.status === 'active' && d.paidUntil) {
+      const grace = new Date(new Date(d.paidUntil).getTime() + 3 * 86400000);
+      return new Date() > grace;
+    }
+    return false;
+  },
+
+  _showSuspendedScreen(d) {
+    document.getElementById('owner-login-screen').classList.add('hidden');
+    document.getElementById('owner-dashboard').classList.add('hidden');
+    const el = document.getElementById('owner-suspended-screen');
+    if (!el) return;
+    const daysEl = document.getElementById('suspended-overdue-days');
+    if (daysEl) {
+      if (d.status === 'suspended') {
+        daysEl.textContent = 'Acesso suspenso pelo administrador';
+      } else if (d.paidUntil) {
+        const days = Math.floor((new Date() - new Date(d.paidUntil)) / 86400000);
+        daysEl.textContent = `${days} dia${days !== 1 ? 's' : ''} em atraso`;
+      } else {
+        daysEl.textContent = 'Mensalidade em atraso';
+      }
+    }
+    el.classList.remove('hidden');
   },
 
   async logout() {
